@@ -420,6 +420,79 @@ const ar: Translations = {
         },
       ],
     },
+
+    esp8266: {
+      sectionNum: '08', sectionLabel: 'ESP8266',
+      title: 'استخدام ESP8266 بدلاً من ESP32',
+      intro: 'يعمل ESP8266 (NodeMCU، Wemos D1 Mini، إلخ) مع هذه المنصة بدون أي تعديل في الخادم أو لوحة التحكم. الخادم يرى فقط مواضيع MQTT وحمولات JSON — لا يهمه أي شريحة أرسلتها. التعديلات الوحيدة المطلوبة في البرنامج الثابت.',
+      toc: 'دعم ESP8266',
+
+      backendNote: 'لا تحتاج إلى أي تغييرات في الخادم أو لوحة التحكم. يتعامل الخادم مع أي جهاز يرسل عبر MQTT بنفس الطريقة.',
+
+      diffTitle: 'ما الذي يتغير مقارنةً بـ ESP32',
+      diffHeaders: ['العنصر', 'ESP32', 'ESP8266'],
+      diffRows: [
+        ['مكتبة WiFi',        '#include <WiFi.h>',           '#include <ESP8266WiFi.h>'],
+        ['حزمة اللوحة',       'esp32 by Espressif',          'esp8266 by ESP8266 Community'],
+        ['لوحة Arduino IDE',  'ESP32 Dev Module',            'NodeMCU 1.0 / Generic ESP8266'],
+        ['GPIO إدخال فقط',    'GPIO 34 (TCS230 OUT)',        'لا يوجد — استخدم D5 (GPIO14) أو أي GPIO متاح'],
+        ['مدخل تناظري',       'ADC 12-بت (0–4095)',          'ADC 10-بت (0–1023)، طرف A0 فقط'],
+        ['جهد التشغيل',       '3.3 فولت',                   '3.3 فولت (نفسه)'],
+        ['حجم الفلاش',        '4 MB عادةً',                 '1–4 MB حسب الوحدة'],
+      ] as string[][],
+
+      gpioTitle: 'إعادة تعيين GPIO المقترحة',
+      gpioHeaders: ['الإشارة', 'طرف ESP32', 'طرف ESP8266 (تسمية NodeMCU)'],
+      gpioRows: [
+        ['HC-SR04 TRIG', 'GPIO 5',  'D1 (GPIO5)'],
+        ['HC-SR04 ECHO', 'GPIO 18', 'D2 (GPIO4)'],
+        ['TCS230 S0',    'GPIO 25', 'D5 (GPIO14)'],
+        ['TCS230 S1',    'GPIO 26', 'D6 (GPIO12)'],
+        ['TCS230 S2',    'GPIO 27', 'D7 (GPIO13)'],
+        ['TCS230 S3',    'GPIO 14', 'D8 (GPIO15)'],
+        ['TCS230 OUT',   'GPIO 34', 'D3 (GPIO0) — أي GPIO إدخال'],
+      ] as string[][],
+
+      hcTitle: 'كود HC-SR04 لـ ESP8266',
+      hcDesc: 'نفس المنطق تماماً كنسخة ESP32 — فقط تغيير تضمين WiFi وأرقام GPIO.',
+
+      tcsTitle: 'كود TCS230 لـ ESP8266',
+      tcsDesc: 'نفس منطق readChannel(). أرقام GPIO معاد تعيينها لتسميات NodeMCU.',
+
+      installTitle: 'تثبيت حزمة لوحة ESP8266',
+      installSteps: [
+        {
+          title: 'فتح إعدادات Arduino IDE',
+          body: 'اذهب إلى File → Preferences (أو Arduino IDE → Settings على macOS).',
+        },
+        {
+          title: 'إضافة رابط مدير اللوحات',
+          body: 'الصق هذا الرابط في خانة "Additional boards manager URLs":',
+          code: 'https://arduino.esp8266.com/stable/package_esp8266com_index.json',
+        },
+        {
+          title: 'تثبيت الحزمة',
+          body: 'اذهب إلى Tools → Board → Boards Manager، ابحث عن "esp8266"، وثبّت "esp8266 by ESP8266 Community".',
+        },
+        {
+          title: 'اختيار اللوحة',
+          body: 'اذهب إلى Tools → Board → ESP8266 Boards → اختر "NodeMCU 1.0 (ESP-12E Module)" أو ما يناسب جهازك.',
+        },
+        {
+          title: 'اختيار المنفذ والتحميل',
+          body: 'اختر منفذ COM الصحيح من Tools → Port، ثم اضغط Upload كالمعتاد.',
+        },
+      ],
+
+      limitTitle: 'قيود معروفة مقارنةً بـ ESP32',
+      limits: [
+        'معالج أحادي النواة — لا يمكنه تشغيل مهمتين بالتوازي، لكن أكوادنا لا تحتاج ذلك.',
+        'طرف تناظري واحد فقط (A0) — كافٍ لمعظم المستشعرات.',
+        'ذاكرة RAM أقل (~80 KB heap) — أبقِ حمولات JSON قصيرة؛ الأكواد في هذا الدليل ضمن الحدود.',
+        'لا دعم Bluetooth — غير مستخدم في هذه المنصة على أي حال.',
+        'الحد الأقصى لمهلة pulseIn() أقل على ESP8266 — أبقِها تحت 1 000 000 µs (1 ثانية).',
+      ],
+    },
   },
 };
 

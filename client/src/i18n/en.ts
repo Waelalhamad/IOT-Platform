@@ -418,6 +418,79 @@ const en = {
         },
       ],
     },
+
+    esp8266: {
+      sectionNum: '08', sectionLabel: 'ESP8266',
+      title: 'Using an ESP8266 instead',
+      intro: 'The ESP8266 (NodeMCU, Wemos D1 Mini, etc.) works with this platform out of the box. The backend only sees MQTT topics and JSON payloads — it does not care which chip sent them. Only the firmware needs small adjustments.',
+      toc: 'ESP8266 Support',
+
+      backendNote: 'Zero backend or dashboard changes are needed. The server treats any MQTT-publishing device the same way.',
+
+      diffTitle: 'What changes vs ESP32',
+      diffHeaders: ['Item', 'ESP32', 'ESP8266'],
+      diffRows: [
+        ['WiFi library',      '#include <WiFi.h>',           '#include <ESP8266WiFi.h>'],
+        ['Board package',     'esp32 by Espressif',          'esp8266 by ESP8266 Community'],
+        ['Arduino IDE board', 'ESP32 Dev Module',            'NodeMCU 1.0 / Generic ESP8266'],
+        ['Input-only GPIO',   'GPIO 34 (TCS230 OUT)',        'No input-only pins — use D5 (GPIO14) or any free GPIO'],
+        ['Analog input',      '12-bit ADC (0–4095)',         '10-bit ADC (0–1023), single pin A0 only'],
+        ['Operating voltage', '3.3 V logic',                 '3.3 V logic (same)'],
+        ['Flash size',        '4 MB typical',                '1–4 MB depending on module'],
+      ] as string[][],
+
+      gpioTitle: 'Suggested GPIO remapping',
+      gpioHeaders: ['Signal', 'ESP32 pin', 'ESP8266 pin (NodeMCU label)'],
+      gpioRows: [
+        ['HC-SR04 TRIG', 'GPIO 5',  'D1 (GPIO5)'],
+        ['HC-SR04 ECHO', 'GPIO 18', 'D2 (GPIO4)'],
+        ['TCS230 S0',    'GPIO 25', 'D5 (GPIO14)'],
+        ['TCS230 S1',    'GPIO 26', 'D6 (GPIO12)'],
+        ['TCS230 S2',    'GPIO 27', 'D7 (GPIO13)'],
+        ['TCS230 S3',    'GPIO 14', 'D8 (GPIO15)'],
+        ['TCS230 OUT',   'GPIO 34', 'D3 (GPIO0) — use any input GPIO'],
+      ] as string[][],
+
+      hcTitle: 'HC-SR04 sketch for ESP8266',
+      hcDesc: 'Identical logic to the ESP32 version — only the WiFi include and GPIO numbers change.',
+
+      tcsTitle: 'TCS230 sketch for ESP8266',
+      tcsDesc: 'Same readChannel() logic. GPIO numbers remapped to NodeMCU labels.',
+
+      installTitle: 'Installing the ESP8266 board package',
+      installSteps: [
+        {
+          title: 'Open Arduino IDE preferences',
+          body: 'Go to File → Preferences (or Arduino IDE → Settings on macOS).',
+        },
+        {
+          title: 'Add the board manager URL',
+          body: 'Paste this URL into "Additional boards manager URLs":',
+          code: 'https://arduino.esp8266.com/stable/package_esp8266com_index.json',
+        },
+        {
+          title: 'Install the package',
+          body: 'Go to Tools → Board → Boards Manager, search "esp8266", and install "esp8266 by ESP8266 Community".',
+        },
+        {
+          title: 'Select your board',
+          body: 'Go to Tools → Board → ESP8266 Boards → choose "NodeMCU 1.0 (ESP-12E Module)" or whichever matches your hardware.',
+        },
+        {
+          title: 'Select the port and upload',
+          body: 'Select the correct COM port under Tools → Port, then click Upload as normal.',
+        },
+      ],
+
+      limitTitle: 'Known limitations vs ESP32',
+      limits: [
+        'Single-core CPU — cannot run two tasks in parallel, but our sketches do not require it.',
+        'Only one analog input pin (A0) — sufficient for most sensor use cases.',
+        'Lower RAM (~80 KB heap) — keep JSON payloads short; the sketches in this guide are well within limits.',
+        'No Bluetooth — not used by this platform anyway.',
+        'pulseIn() maximum timeout is lower on ESP8266 — keep it under 1 000 000 µs (1 s).',
+      ],
+    },
   },
 };
 

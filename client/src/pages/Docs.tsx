@@ -343,10 +343,164 @@ void loop() {
   delay(300);
 }`;
 
+const HC_SR04_8266_SKETCH = `#include <ESP8266WiFi.h>      // <-- only change from ESP32 version
+#include <PubSubClient.h>
+
+// ── WiFi credentials ──────────────────────
+const char* WIFI_SSID     = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+
+// ── MQTT credentials (from Devices page) ──
+const char* MQTT_HOST     = "YOUR_BROKER_HOST";
+const int   MQTT_PORT     = 1883;
+const char* MQTT_USER     = "YOUR_MQTT_USERNAME";
+const char* MQTT_PASS     = "YOUR_MQTT_PASSWORD";
+const char* MQTT_TOPIC    = "YOUR_MQTT_TOPIC";
+
+// ── HC-SR04 pins (NodeMCU labels) ─────────
+#define TRIG_PIN D1   // GPIO5
+#define ECHO_PIN D2   // GPIO4
+
+WiFiClient   espClient;
+PubSubClient mqtt(espClient);
+
+void connectWiFi() {
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500); Serial.print(".");
+  }
+  Serial.println(" connected");
+}
+
+void connectMQTT() {
+  while (!mqtt.connected()) {
+    String clientId = "esp8266-" + String(random(0xffff), HEX);
+    if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+      Serial.println("MQTT connected");
+    } else {
+      Serial.print("failed rc="); Serial.print(mqtt.state());
+      Serial.println(" retrying in 5s");
+      delay(5000);
+    }
+  }
+}
+
+float measureDistance() {
+  digitalWrite(TRIG_PIN, LOW);  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+  return duration * 0.0343 / 2.0;
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  connectWiFi();
+  mqtt.setServer(MQTT_HOST, MQTT_PORT);
+}
+
+void loop() {
+  if (!mqtt.connected()) connectMQTT();
+  mqtt.loop();
+
+  float dist = measureDistance();
+  char payload[128];
+  snprintf(payload, sizeof(payload),
+    "{\\"sensors\\":[{\\"type\\":\\"hcsr04\\",\\"value\\":%.1f,\\"unit\\":\\"cm\\"}]}",
+    dist);
+
+  mqtt.publish(MQTT_TOPIC, payload);
+  Serial.println(payload);
+  delay(500);
+}`;
+
+const TCS230_8266_SKETCH = `#include <ESP8266WiFi.h>      // <-- only change from ESP32 version
+#include <PubSubClient.h>
+
+// ── WiFi credentials ──────────────────────
+const char* WIFI_SSID     = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+
+// ── MQTT credentials (from Devices page) ──
+const char* MQTT_HOST  = "YOUR_BROKER_HOST";
+const int   MQTT_PORT  = 1883;
+const char* MQTT_USER  = "YOUR_MQTT_USERNAME";
+const char* MQTT_PASS  = "YOUR_MQTT_PASSWORD";
+const char* MQTT_TOPIC = "YOUR_MQTT_TOPIC";
+
+// ── TCS230 pins (NodeMCU labels) ──────────
+#define S0_PIN  D5   // GPIO14
+#define S1_PIN  D6   // GPIO12
+#define S2_PIN  D7   // GPIO13
+#define S3_PIN  D8   // GPIO15
+#define OUT_PIN D3   // GPIO0 — any available input GPIO
+
+WiFiClient   espClient;
+PubSubClient mqtt(espClient);
+
+void connectWiFi() {
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println(" connected");
+}
+
+void connectMQTT() {
+  while (!mqtt.connected()) {
+    String clientId = "esp8266-" + String(random(0xffff), HEX);
+    if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+      Serial.println("MQTT connected");
+    } else { delay(5000); }
+  }
+}
+
+int readChannel(bool s2, bool s3) {
+  digitalWrite(S2_PIN, s2);
+  digitalWrite(S3_PIN, s3);
+  delay(10);
+  long count = 0;
+  unsigned long start = millis();
+  while (millis() - start < 50) {
+    if (pulseIn(OUT_PIN, LOW, 100000) > 0) count++;
+  }
+  return (int)constrain(map(count, 0, 200, 0, 255), 0, 255);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(S0_PIN, OUTPUT); pinMode(S1_PIN, OUTPUT);
+  pinMode(S2_PIN, OUTPUT); pinMode(S3_PIN, OUTPUT);
+  pinMode(OUT_PIN, INPUT);
+  digitalWrite(S0_PIN, HIGH); digitalWrite(S1_PIN, LOW); // 20% scaling
+  connectWiFi();
+  mqtt.setServer(MQTT_HOST, MQTT_PORT);
+}
+
+void loop() {
+  if (!mqtt.connected()) connectMQTT();
+  mqtt.loop();
+
+  int r = readChannel(LOW,  LOW);
+  int g = readChannel(HIGH, HIGH);
+  int b = readChannel(LOW,  HIGH);
+
+  char payload[160];
+  snprintf(payload, sizeof(payload),
+    "{\\"sensors\\":[{\\"type\\":\\"tcs230\\",\\"value\\":{\\"r\\":%d,\\"g\\":%d,\\"b\\":%d},\\"unit\\":\\"rgb\\"}]}",
+    r, g, b);
+
+  mqtt.publish(MQTT_TOPIC, payload);
+  Serial.println(payload);
+  delay(300);
+}`;
+
 /* ─────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────── */
-const TOC_IDS = ['overview', 'prerequisites', 'wiring', 'firmware', 'platform-setup', 'adding-widgets', 'troubleshooting'];
+const TOC_IDS = ['overview', 'prerequisites', 'wiring', 'firmware', 'platform-setup', 'adding-widgets', 'troubleshooting', 'esp8266'];
 
 export default function Docs() {
   const { t } = useI18n();
@@ -362,6 +516,7 @@ export default function Docs() {
     { id: 'platform-setup',  label: d.toc.platformSetup },
     { id: 'adding-widgets',  label: d.toc.addingWidgets },
     { id: 'troubleshooting', label: d.toc.troubleshooting },
+    { id: 'esp8266',         label: d.esp8266.toc },
   ];
 
   const scrollTo = (id: string) => {
@@ -597,6 +752,59 @@ export default function Docs() {
           <section id="troubleshooting" className="mb-16">
             <SectionHeader num={d.troubleshooting.sectionNum} label={d.troubleshooting.sectionLabel} title={d.troubleshooting.title} />
             <Accordion items={d.troubleshooting.items as unknown as { q: string; a: string; bullets: string[] }[]} />
+          </section>
+
+          {/* ══════════════════════════════════
+              SECTION 8 — ESP8266
+          ══════════════════════════════════ */}
+          <section id="esp8266" className="mb-16">
+            <SectionHeader num={d.esp8266.sectionNum} label={d.esp8266.sectionLabel} title={d.esp8266.title} />
+
+            <p className="text-sm text-mid leading-relaxed mb-4">{d.esp8266.intro}</p>
+
+            <InfoBanner variant="info">{d.esp8266.backendNote}</InfoBanner>
+
+            {/* Diff table */}
+            <h3 className="text-base font-bold text-hi mb-2 mt-8">{d.esp8266.diffTitle}</h3>
+            <WiringTable headers={d.esp8266.diffHeaders as unknown as string[]} rows={d.esp8266.diffRows as unknown as string[][]} />
+
+            {/* GPIO remapping */}
+            <h3 className="text-base font-bold text-hi mb-2 mt-8">{d.esp8266.gpioTitle}</h3>
+            <WiringTable headers={d.esp8266.gpioHeaders as unknown as string[]} rows={d.esp8266.gpioRows as unknown as string[][]} />
+
+            {/* Install steps */}
+            <h3 className="text-base font-bold text-hi mb-2 mt-8">{d.esp8266.installTitle}</h3>
+            <StepList steps={d.esp8266.installSteps.map((s) => ({
+              title: s.title,
+              body: (
+                <>
+                  <p>{s.body}</p>
+                  {'code' in s && s.code && <CodeBlock lang="url" code={s.code} />}
+                </>
+              ),
+            }))} />
+
+            {/* HC-SR04 sketch */}
+            <h3 className="text-base font-bold text-hi mb-1 mt-8">{d.esp8266.hcTitle}</h3>
+            <p className="text-sm text-mid mb-2 leading-relaxed">{d.esp8266.hcDesc}</p>
+            <CodeBlock code={HC_SR04_8266_SKETCH} />
+
+            {/* TCS230 sketch */}
+            <h3 className="text-base font-bold text-hi mb-1 mt-8">{d.esp8266.tcsTitle}</h3>
+            <p className="text-sm text-mid mb-2 leading-relaxed">{d.esp8266.tcsDesc}</p>
+            <CodeBlock code={TCS230_8266_SKETCH} />
+
+            {/* Limitations */}
+            <h3 className="text-base font-bold text-hi mb-3 mt-8">{d.esp8266.limitTitle}</h3>
+            <ul className="flex flex-col gap-2">
+              {(d.esp8266.limits as string[]).map((lim, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
+                    style={{ background: '#f59e0b', boxShadow: '0 0 5px rgba(245,158,11,0.4)' }} />
+                  <span className="text-mid">{lim}</span>
+                </li>
+              ))}
+            </ul>
           </section>
 
         </div>
