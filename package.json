@@ -4,6 +4,8 @@
   "private": true,
   "description": "ESP32 Sensor Monitoring Platform",
   "scripts": {
+    "build": "cd server && npm install && npm run build",
+    "start": "cd server && npm start",
     "server": "cd server && npm run dev",
     "client": "cd client && npm run dev",
     "docker:up": "docker compose up -d",
