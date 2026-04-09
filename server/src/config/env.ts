@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
-import { logger } from './logger';
 
 dotenv.config();
 
@@ -35,8 +34,8 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  logger.error('Invalid environment variables:');
-  logger.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
+  console.error('Invalid environment variables:');
+  console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
   process.exit(1);
 }
 
@@ -52,12 +51,12 @@ if (data.NODE_ENV === 'production') {
   ];
   for (const [name, val] of secrets) {
     if (!notPlaceholder(val)) {
-      logger.error(`FATAL: ${name} is a placeholder — replace it before running in production`);
+      console.error(`FATAL: ${name} is a placeholder — replace it before running in production`);
       process.exit(1);
     }
   }
   if (!data.COOKIE_SECURE) {
-    logger.warn('WARNING: COOKIE_SECURE=false in production — cookies will be sent over HTTP');
+    console.warn('WARNING: COOKIE_SECURE=false in production — cookies will be sent over HTTP');
   }
 }
 

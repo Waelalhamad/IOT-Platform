@@ -22,7 +22,7 @@ app.use(helmet({
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: env.CORS_ORIGIN,
+  origin: [env.CORS_ORIGIN, 'https://iot-platform-seven.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));
