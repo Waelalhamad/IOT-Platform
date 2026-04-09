@@ -1,8 +1,14 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { z } from 'zod';
-import { logger } from './logger';
 
-dotenv.config();
+// Load .env only when the file is present (local development).
+// In production (Railway), variables are injected directly into process.env.
+const envFilePath = path.resolve(process.cwd(), '.env');
+if (fs.existsSync(envFilePath)) {
+  dotenv.config({ path: envFilePath });
+}
 
 const PLACEHOLDER_SECRETS = [
   'changeme', 'replace_this', 'replace_me', 'your_secret',
@@ -35,8 +41,11 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  logger.error('Invalid environment variables:');
-  logger.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
+  const fieldErrors = parsed.error.flatten().fieldErrors;
+  const missing = Object.entries(fieldErrors)
+    .map(([key, msgs]) => `  ${key}: ${(msgs as string[]).join(', ')}`)
+    .join('\n');
+  console.error('[env] Environment variable validation failed. Missing or invalid variables:\n' + missing);
   process.exit(1);
 }
 
@@ -52,12 +61,12 @@ if (data.NODE_ENV === 'production') {
   ];
   for (const [name, val] of secrets) {
     if (!notPlaceholder(val)) {
-      logger.error(`FATAL: ${name} is a placeholder — replace it before running in production`);
+      console.error(`[env] FATAL: ${name} is a placeholder — replace it before running in production`);
       process.exit(1);
     }
   }
   if (!data.COOKIE_SECURE) {
-    logger.warn('WARNING: COOKIE_SECURE=false in production — cookies will be sent over HTTP');
+    console.warn('[env] WARNING: COOKIE_SECURE=false in production — cookies will be sent over HTTP');
   }
 }
 
