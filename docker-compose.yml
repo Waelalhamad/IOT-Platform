@@ -1,0 +1,69 @@
+version: '3.9'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: esp-monitor-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-espmonitor2024}
+      MONGO_INITDB_DATABASE: esp_monitor
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
+    # Port NOT exposed to host — only reachable inside esp-monitor-net
+    networks:
+      - esp-monitor-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  emqx:
+    image: emqx/emqx:5.6.0
+    container_name: esp-monitor-emqx
+    restart: unless-stopped
+    environment:
+      EMQX_NAME: esp-monitor
+      EMQX_HOST: 127.0.0.1
+      EMQX_ALLOW_ANONYMOUS: "false"
+      EMQX_LOADED_PLUGINS: "emqx_recon,emqx_retainer,emqx_management,emqx_dashboard"
+      # Change the default admin dashboard password
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-Ch4ng3M3Now!}
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+      - ./docker/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+    ports:
+      - "1883:1883"   # MQTT — expose only to trusted network in prod (use firewall)
+      - "8083:8083"   # MQTT over WebSocket
+      # 18083 (dashboard) NOT exposed — access via: docker exec + port forward only
+    networks:
+      - esp-monitor-net
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: esp-monitor-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_change_me}
+    # Port NOT exposed to host — only reachable inside esp-monitor-net
+    networks:
+      - esp-monitor-net
+    profiles:
+      - scaling
+
+volumes:
+  mongo_data:
+  emqx_data:
+  emqx_log:
+
+networks:
+  esp-monitor-net:
+    driver: bridge

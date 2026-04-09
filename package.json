@@ -1,0 +1,13 @@
+{
+  "name": "esp-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ESP32 Sensor Monitoring Platform",
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "install:all": "cd server && npm install && cd ../client && npm install"
+  }
+}
