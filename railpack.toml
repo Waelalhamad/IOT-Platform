@@ -1,0 +1,8 @@
+[config]
+rootDirectory = "server"
+
+[build]
+cmd = "npm run build"
+
+[start]
+cmd = "node dist/server.js"
